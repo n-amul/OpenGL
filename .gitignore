@@ -1,2 +1,2 @@
-CMakeTest/build/
-CMakeTest/.vscode/
+/build
+/.vscode
