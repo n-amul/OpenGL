@@ -37,3 +37,7 @@ WINDOW_HEIGHT=${WINDOW_HEIGHT}
 
 # Dependency들이 먼저 build 될 수 있게 관계 설정
 add_dependencies(${PROJECT_NAME} ${DEP_LIST})
+
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PUBLIC /wd4819)
+endif()

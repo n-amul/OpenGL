@@ -19,7 +19,7 @@ ExternalProject_Add(
 )
 # Dependency 리스트 및 라이브러리 파일 리스트 추가
 set(DEP_LIST ${DEP_LIST} dep-spdlog)
-set(DEP_LIBS ${DEP_LIBS} spdlog)
+set(DEP_LIBS ${DEP_LIBS} spdlog$<$<CONFIG:Debug>:d>)
 
 # glfw
 ExternalProject_Add(
@@ -81,6 +81,7 @@ ExternalProject_Add(
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
   TEST_COMMAND ""
+
   INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${PROJECT_BINARY_DIR}/dep_glm-prefix/src/dep_glm/glm
     ${DEP_INSTALL_DIR}/include/glm
@@ -88,16 +89,3 @@ ExternalProject_Add(
 set(DEP_LIST ${DEP_LIST} dep_glm)
 
 #imgui
-add_library(imgui
-    imgui/imgui_draw.cpp
-    imgui/imgui_tables.cpp
-    imgui/imgui_widgets.cpp
-    imgui/imgui.cpp
-    imgui/imgui_impl_glfw.cpp
-    imgui/imgui_impl_opengl3.cpp
-)
-target_include_directories(imgui PRIVATE ${DEP_INCLUDE_DIR})
-add_dependencies(imgui ${DEP_LIST})
-set(DEP_INCLUDE_DIR ${DEP_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/imgui)
-set(DEP_LIST ${DEP_LIST} imgui)
-set(DEP_LIBS ${DEP_LIBS} imgui)

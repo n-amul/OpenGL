@@ -1,31 +1,45 @@
 #include "context.h"
 
-#include <spdlog/spdlog.h>
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glad/glad.h>
+#include <spdlog/spdlog.h>
 
 using namespace std;
 
 void onFramebufferSizeChange(GLFWwindow *window, int width, int height)
 {
     SPDLOG_INFO("framebuffer size changed: ({} x {})", width, height);
-    glViewport(0, 0, width, height);
+    auto context = reinterpret_cast<Context *>(glfwGetWindowUserPointer(window));
+    context->Reshape(width, height);
 }
 void onKeyEvent(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-    SPDLOG_INFO("key: {}, scancode: {}, action: {}, mods: {}{}{}",
-                key, scancode,
-                action == GLFW_PRESS ? "Pressed" : action == GLFW_RELEASE ? "Released"
-                                               : action == GLFW_REPEAT    ? "Repeat"
-                                                                          : "Unknown",
-                mods & GLFW_MOD_CONTROL ? "C" : "-",
-                mods & GLFW_MOD_SHIFT ? "S" : "-",
+    SPDLOG_INFO("key: {}, scancode: {}, action: {}, mods: {}{}{}", key, scancode,
+                action == GLFW_PRESS     ? "Pressed"
+                : action == GLFW_RELEASE ? "Released"
+                : action == GLFW_REPEAT  ? "Repeat"
+                                         : "Unknown",
+                mods & GLFW_MOD_CONTROL ? "C" : "-", mods & GLFW_MOD_SHIFT ? "S" : "-",
                 mods & GLFW_MOD_ALT ? "A" : "-");
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     {
         glfwSetWindowShouldClose(window, true);
     }
 }
+void OnCursorPos(GLFWwindow *window, double x, double y)
+{
+    auto context = (Context *)glfwGetWindowUserPointer(window);
+    context->MouseMove(x, y);
+}
+void OnMouseButton(GLFWwindow *window, int button, int action, int modifier)
+{
+    auto context = (Context *)glfwGetWindowUserPointer(window);
+    double x, y;
+    glfwGetCursorPos(window, &x, &y);
+    context->MouseButton(button, action, x, y);
+}
+
+//----------------------------------------------------------//
 
 int main(int argc, char **args)
 {
@@ -45,8 +59,7 @@ int main(int argc, char **args)
 
     // glfw 윈도우 생성
     SPDLOG_INFO("Create glfw window");
-    auto window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_NAME,
-                                   nullptr, nullptr);
+    auto window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_NAME, nullptr, nullptr);
     if (!window)
     {
         SPDLOG_ERROR("failed to create glfw window");
@@ -72,10 +85,13 @@ int main(int argc, char **args)
         glfwTerminate();
         return -1;
     }
+    glfwSetWindowUserPointer(window, context.get());
     // set events
     onFramebufferSizeChange(window, WINDOW_WIDTH, WINDOW_HEIGHT);
     glfwSetFramebufferSizeCallback(window, onFramebufferSizeChange);
     glfwSetKeyCallback(window, onKeyEvent);
+    glfwSetCursorPosCallback(window, OnCursorPos);
+    glfwSetMouseButtonCallback(window, OnMouseButton);
 
     // backbuffer draw
     glClearColor(0.0f, 0.1f, 0.2f, 0.0f);
@@ -86,6 +102,7 @@ int main(int argc, char **args)
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
+        context->ProcessInput(window);
         context->Render();
         glfwSwapBuffers(window);
     }
