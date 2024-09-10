@@ -7,6 +7,8 @@
 #include "shader.h"
 #include "texture.h"
 #include "vertex_layout.h"
+#include "mesh.h"
+#include "model.h"
 #include <time.h>
 
 CLASS_PTR(Context)
@@ -25,14 +27,13 @@ class Context
   private:
     Context(){};
     bool Init();
-    VertexLayoutUPtr m_vertexLayout;
-    BufferUPtr m_indexBuffer;
-    BufferUPtr m_vertexBuffer;
 
     ProgramUPtr m_program;
     ProgramUPtr m_simpleProgram;
-    TextureUPtr m_texture;
-    TextureUPtr m_texture2;
+
+    MeshUPtr m_box;
+   	ModelUPtr m_model;
+
     //  animation
     bool m_animation{true};
 
@@ -49,21 +50,18 @@ class Context
     // light parameter
     struct Light
     {
-        glm::vec3 position{glm::vec3(3.0f, 3.0f, 3.0f)};
-        glm::vec3 ambient{glm::vec3(0.1f, 0.1f, 0.1f)};
-        glm::vec3 diffuse{glm::vec3(0.5f, 0.5f, 0.5f)};
-        glm::vec3 specular{glm::vec3(1.0f, 1.0f, 1.0f)};
+        glm::vec3 position { glm::vec3(2.0f, 2.0f, 2.0f) };
+        glm::vec3 direction { glm::vec3(-1.0f, -1.0f, -1.0f) };
+        glm::vec2 cutoff { glm::vec2(20.0f, 5.0f) };
+        float distance { 32.0f };
+        glm::vec3 ambient { glm::vec3(0.1f, 0.1f, 0.1f) };
+        glm::vec3 diffuse { glm::vec3(0.8f, 0.8f, 0.8f) };
+        glm::vec3 specular { glm::vec3(1.0f, 1.0f, 1.0f) };
     };
     Light m_light;
 
     // material parameter
-    struct Material
-    {
-        TextureUPtr diffuse;
-        TextureUPtr specular;
-        float shininess{32.0f};
-    };
-    Material m_material;
+    MaterialPtr m_material;
 
     int m_width{640};
     int m_height{480};

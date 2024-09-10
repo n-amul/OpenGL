@@ -45,7 +45,11 @@ void Program::SetUniform(const std::string &name, float value) const
     auto loc = glGetUniformLocation(m_program, name.c_str());
     glUniform1f(loc, value);
 }
-
+void Program::SetUniform(const std::string& name, const glm::vec2& value) const 
+{
+    auto loc = glGetUniformLocation(m_program, name.c_str());
+    glUniform2fv(loc, 1, glm::value_ptr(value));
+}
 void Program::SetUniform(const std::string &name, const glm::vec3 &value) const
 {
     auto loc = glGetUniformLocation(m_program, name.c_str());

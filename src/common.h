@@ -22,5 +22,6 @@ using namespace std;
     using klassName##WPtr = weak_ptr<klassName>;
 
 optional<string> LoadTextFile(const string &filename);
+glm::vec3 GetAttenuationCoeff(float distance);
 
 #endif

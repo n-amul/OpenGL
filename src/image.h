@@ -8,6 +8,8 @@ class Image
 {
 public:
     static ImageUPtr Load(const std::string &filepath);
+    static ImageUPtr Create(int width, int height, int channelCount = 4);
+    static ImageUPtr CreateSingleColorImage(int width, int height, const glm::vec4& color);
     ~Image();
 
     const uint8_t *GetData() const { return m_data; }
@@ -18,6 +20,7 @@ public:
 private:
     Image(){};
     bool LoadWithStb(const std::string &filepath);
+    bool Allocate(int width, int height, int channelCount);
     int m_width{0};
     int m_height{0};
     int m_channelCount{0};

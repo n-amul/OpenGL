@@ -4,7 +4,7 @@ set(PROJECT_NAME first_opengl_example)
 set(CMAKE_CXX_STANDARD 17)
 
 
-set(WINDOW_NAME "First OpenGL Project")
+set(WINDOW_NAME "Mesh")
 set(WINDOW_WIDTH 960)
 set(WINDOW_HEIGHT 540)
 
@@ -19,6 +19,8 @@ add_executable(${PROJECT_NAME}
     src/vertex_layout.cpp src/vertex_layout.h
     src/image.cpp src/image.h
     src/texture.cpp src/texture.h
+    src/mesh.cpp src/mesh.h
+    src/model.cpp src/model.h
     )
 
 include(Dependency.cmake)
