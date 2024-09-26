@@ -20,6 +20,8 @@ void Context::Reshape(int width, int height)
     m_width = width;
     m_height = height;
     glViewport(0, 0, m_width, m_height);
+
+    m_framebuffer = Framebuffer::Create(Texture::Create(width, height, GL_RGBA));
 }
 void Context::MouseMove(double x, double y)
 {
@@ -60,6 +62,7 @@ void Context::MouseButton(int button, int action, double x, double y)
         }
     }
 }
+//현재 모델로더에 프레임버퍼 쉐이딩 노말맵 라이팅 pbr 적용  
 bool Context::Init()
 {
     glEnable(GL_DEPTH_TEST);
@@ -67,8 +70,8 @@ bool Context::Init()
 
     m_box=Mesh::CreateBox();
 
-    std::filesystem::path current_path = std::filesystem::current_path();
     // Log the current working directory
+    std::filesystem::path current_path = std::filesystem::current_path();
     SPDLOG_INFO("Current working directory: {}", current_path.string());
 
     // create program
@@ -85,13 +88,28 @@ bool Context::Init()
     if (!m_model){
          return false;
     }
+    m_plane = Mesh::CreatePlane();
+
+     m_textureProgram = Program::Create("../../shader/texture.vs", "../../shader/texture.fs");
+    if (!m_textureProgram)
+      return false;
+
+    m_postProgram = Program::Create("../../shader/texture.vs", "../../shader/gamma.fs");
+    if (!m_postProgram)
+        return false;
     
     //load texture
-    // m_material.diffuse = Texture::CreateFromImage(Image::Load("../../image/container2.png").get());
-    // m_material.specular = Texture::CreateFromImage(Image::Load("../../image/container2_specular.png").get());
+    m_windowTexture = Texture::CreateFromImage(Image::Load("../../image/blending_transparent_window.png").get());
+    TexturePtr grayTexture = Texture::CreateFromImage(Image::CreateSingleColorImage(4, 4, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f)).get());
     m_material = Material::Create();
-    m_material->diffuse = Texture::CreateFromImage( Image::CreateSingleColorImage(4, 4, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)).get());
-    m_material->specular = Texture::CreateFromImage( Image::CreateSingleColorImage(4, 4, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f)).get());
+    m_material->diffuse = Texture::CreateFromImage( Image::CreateSingleColorImage(4, 4, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)).get()); //gen & bind
+    m_material->specular = grayTexture;
+
+
+    m_planeMaterial = Material::Create();
+    m_planeMaterial->diffuse = Texture::CreateFromImage(Image::Load("../../image/marble.jpg").get());
+    m_planeMaterial->specular = grayTexture;
+    m_planeMaterial->shininess = 128.0f;
 
     return true;
 }
@@ -117,6 +135,8 @@ void Context::Render()
         if (ImGui::ColorEdit4("clear color", glm::value_ptr(m_clearColor))) {
             glClearColor(m_clearColor.r, m_clearColor.g, m_clearColor.b, m_clearColor.a);
         }
+        ImGui::DragFloat("gamma", &m_gamma, 0.01f, 0.0f, 2.0f);
+
         ImGui::Separator();
         ImGui::DragFloat3("camera pos", glm::value_ptr(m_cameraPos), 0.01f);
         ImGui::DragFloat("camera yaw", &m_cameraYaw, 0.5f);
@@ -130,14 +150,17 @@ void Context::Render()
     }
     ImGui::End();
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //draw on frame buffer
+    m_framebuffer->Bind();
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     m_cameraFront = glm::rotate(glm::mat4(1.0f), glm::radians(m_cameraYaw), glm::vec3(0.0f, 1.0f, 0.0f)) *
                     glm::rotate(glm::mat4(1.0f), glm::radians(m_cameraPitch), glm::vec3(1.0f, 0.0f, 0.0f)) *
                     glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
 
     auto view = glm::lookAt(m_cameraPos, m_cameraPos + m_cameraFront, m_cameraUp);
-    auto projection = glm::perspective(glm::radians(45.0f), (float)(m_width / m_height), 0.01f, 20.0f);
+    auto projection = glm::perspective(glm::radians(45.0f), (float)(m_width / m_height), 0.01f, 100.0f);
 
     // draw light cube
     auto lightModelTransform =
@@ -147,8 +170,8 @@ void Context::Render()
     m_simpleProgram->SetUniform("color", glm::vec4(m_light.ambient + m_light.diffuse, 1.0f));
     m_simpleProgram->SetUniform("transform", projection * view * lightModelTransform);
     m_box->Draw(m_simpleProgram.get());
-
-    //draw model
+    
+    //setup shader var
     m_program->Use();
     m_program->SetUniform("viewPos", m_cameraPos);
     m_program->SetUniform("light.position", m_light.position);
@@ -161,11 +184,50 @@ void Context::Render()
     m_program->SetUniform("light.diffuse", m_light.diffuse);
     m_program->SetUniform("light.specular", m_light.specular);
 
-    auto modelTransform = glm::mat4(1.0f);
+    //draw model
+    auto modelTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.5f, 0.0f));
     auto transform = projection * view * modelTransform;
     m_program->SetUniform("transform", transform);
     m_program->SetUniform("modelTransform", modelTransform);
     m_model->Draw(m_program.get());
+    
+    //draw floor
+    auto floorTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -0.5f, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(10.0f, 0.5f, 10.0f));
+    transform = projection * view * floorTransform;
+    m_program->SetUniform("transform", transform);
+    m_program->SetUniform("modelTransform", floorTransform);
+    m_planeMaterial->SetToProgram(m_program.get());
+    m_box->Draw(m_program.get());
+
+    //draw window with blending
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    m_textureProgram->Use();
+    m_windowTexture->Bind();
+    m_textureProgram->SetUniform("tex", 0);
+
+    modelTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.5f, 4.0f));
+    transform = projection * view * modelTransform;
+    m_textureProgram->SetUniform("transform", transform);
+    m_plane->Draw(m_textureProgram.get());
+
+    modelTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.3f, 1.5f, 5.0f));
+    transform = projection * view * modelTransform;
+    m_textureProgram->SetUniform("transform", transform);
+    m_plane->Draw(m_textureProgram.get());
+
+    Framebuffer::BindToDefault();
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glDisable(GL_BLEND);
+
+    m_postProgram->Use();
+    m_postProgram->SetUniform("transform", glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 1.0f)));
+    m_postProgram->SetUniform("gamma", m_gamma);
+    m_framebuffer->GetColorAttachment()->Bind();
+    m_postProgram->SetUniform("tex", 0);
+    m_plane->Draw(m_postProgram.get());
 }
 
 void Context::ProcessInput(GLFWwindow *window)

@@ -20,7 +20,7 @@ bool Model::LoadByAssimp(const std::string& filename) {
     if (material->GetTextureCount(type) <= 0)
       return nullptr;
     aiString filepath;
-    material->GetTexture(aiTextureType_DIFFUSE, 0, &filepath);
+    material->GetTexture(type, 0, &filepath);
     auto image = Image::Load(fmt::format("{}/{}", dirname, filepath.C_Str()));
     if (!image)
       return nullptr;
