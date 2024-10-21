@@ -6,7 +6,8 @@ CLASS_PTR(Texture);
 class Texture
 {
 public:
-    static TextureUPtr Create(int width, int height, uint32_t format);
+    static TextureUPtr Create(int width, int height, uint32_t format, uint32_t type = GL_UNSIGNED_BYTE);
+    static TextureUPtr CreateMSAA(int width, int height, uint32_t format);
     static TextureUPtr CreateFromImage(const Image *image);
     ~Texture();
     const uint32_t Get() const { return m_texture; }
@@ -16,17 +17,34 @@ public:
     int GetWidth() const { return m_width; }
     int GetHeight() const { return m_height; }
     uint32_t GetFormat() const { return m_format; }
+    uint32_t GetType() const { return m_type; }
+    void SetBorderColor(const glm::vec4& color)const;
 
 private:
     Texture() {}
     void CreateTexture();
     void SetTextureFromImage(const Image *image);
-    void SetTextureFormat(int width, int height, uint32_t format);
+    void SetTextureFormat(int width, int height, uint32_t format, uint32_t type);
 
     uint32_t m_texture{0};
     int m_width { 0 };
     int m_height { 0 };
     uint32_t m_format { GL_RGBA };
+    uint32_t m_type{ GL_UNSIGNED_BYTE };
+};
+CLASS_PTR(CubeTexture)
+class CubeTexture {
+public:
+  static CubeTextureUPtr CreateFromImages(
+    const std::vector<Image*> images);
+  ~CubeTexture();
+
+  const uint32_t Get() const { return m_texture; }
+  void Bind() const;
+private:
+  CubeTexture() {}
+  bool InitFromImages(const std::vector<Image*> images);
+  uint32_t m_texture { 0 };
 };
 
 #endif

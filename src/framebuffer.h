@@ -7,6 +7,8 @@ CLASS_PTR(Framebuffer);
 class Framebuffer {
 public:
     static FramebufferUPtr Create(const TexturePtr colorAttachment);
+    static FramebufferUPtr CreateMSAA(int width, int height, uint32_t format);
+
     static void BindToDefault();
     ~Framebuffer();
 
@@ -17,6 +19,7 @@ public:
 private:
     Framebuffer() {}
     bool InitWithColorAttachment(const TexturePtr colorAttachment);
+    bool InitWithColorAttachmentMSAA(int width, int height, uint32_t format);
 
     uint32_t m_framebuffer { 0 };
     uint32_t m_depthStencilBuffer { 0 };
